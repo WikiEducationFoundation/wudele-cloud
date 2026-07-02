@@ -19,8 +19,8 @@ whole stack:
 - **PostgreSQL 17** (local), database and role `wudele`
 - **wudele-worker** systemd service running the Symfony Messenger worker
   (async jobs and scheduled tasks such as poll expiration)
-- Outbound mail through the instance-local Cloud VPS mail relay
-  (`localhost:25`, sender `noreply@wudele.wmcloud.org`)
+- Email features disabled entirely (`APP_EMAILS_ENABLED=false` and a null
+  mailer transport), like the original wudele.toolforge.org
 - Nightly `pg_dump` backups to `/srv/backups/wudele` (14 days retention)
 
 Secrets (Symfony `APP_SECRET`, database password) are generated on the host on
