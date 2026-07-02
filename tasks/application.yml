@@ -1,0 +1,60 @@
+---
+# Cloud VPS members can only sudo to root, so the commands that must run as
+# the application user go through `su` from root instead of become_user.
+- name: Clone or update the application repository
+  shell: |
+    set -e
+    run() { su {{ app_user }} -s /bin/sh -c "cd {{ app_path }} && $1"; }
+    if [ ! -d "{{ app_path }}/.git" ]; then
+        su {{ app_user }} -s /bin/sh -c "git clone --branch {{ app_version }} {{ app_repo }} {{ app_path }}"
+        echo CHANGED
+    else
+        old=$(run "git rev-parse HEAD")
+        run "git fetch origin"
+        if run "git show-ref --verify -q refs/remotes/origin/{{ app_version }}"; then
+            run "git checkout -q {{ app_version }} && git reset --hard -q origin/{{ app_version }}"
+        else
+            run "git checkout -q {{ app_version }}"
+        fi
+        new=$(run "git rev-parse HEAD")
+        if [ "$old" != "$new" ]; then
+            echo CHANGED
+        fi
+    fi
+  register: app_checkout
+  changed_when: "'CHANGED' in app_checkout.stdout"
+  notify:
+    - Restart PHP-FPM
+    - Restart the worker
+
+- name: Configure the application (.env.local)
+  template:
+    src: files/env.local.j2
+    dest: "{{ app_path }}/.env.local"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0400"
+  register: app_config
+  notify:
+    - Restart PHP-FPM
+    - Restart the worker
+
+- name: Install the Composer dependencies
+  shell: >
+    su {{ app_user }} -s /bin/sh -c
+    "cd {{ app_path }} && composer install --no-dev --optimize-autoloader --no-interaction"
+  register: composer_install
+  changed_when: "'Nothing to install, update or remove' not in composer_install.stderr"
+
+- name: Run the database migrations
+  shell: >
+    su {{ app_user }} -s /bin/sh -c
+    "cd {{ app_path }} && php bin/console doctrine:migrations:migrate --no-interaction"
+  register: migrations
+  changed_when: "'Already at the latest version' not in migrations.stdout"
+
+- name: Clear the application cache
+  shell: >
+    su {{ app_user }} -s /bin/sh -c
+    "cd {{ app_path }} && php bin/console cache:clear"
+  when: app_checkout.changed or app_config.changed

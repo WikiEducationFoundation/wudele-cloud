@@ -1,0 +1,11 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Nightly dump of the Wudele database, run as the postgres user.
+set -eu
+
+BACKUPS_PATH="{{ backups_path }}"
+RETENTION_DAYS=14
+
+pg_dump --format=custom --file="$BACKUPS_PATH/wudele-$(date +%Y%m%d).dump" {{ db_name }}
+
+find "$BACKUPS_PATH" -name 'wudele-*.dump' -mtime +"$RETENTION_DAYS" -delete

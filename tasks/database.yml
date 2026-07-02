@@ -1,0 +1,38 @@
+---
+# Cloud VPS members can only sudo to root (and the project group), not to
+# the postgres user, so the postgres commands run through `su postgres`
+# from root instead of become_user.
+- name: Ensure PostgreSQL is running
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Create the database user
+  shell: |
+    set -e
+    exists=$(su postgres -s /bin/sh -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname = '{{ db_user }}'\"")
+    if [ "$exists" != "1" ]; then
+      su postgres -s /bin/sh -c "createuser {{ db_user }}"
+      echo created
+    fi
+  register: create_db_user
+  changed_when: "'created' in create_db_user.stdout"
+
+- name: Set the database user password
+  shell: >
+    echo "ALTER ROLE {{ db_user }} WITH PASSWORD '{{ db_password }}';"
+    | su postgres -s /bin/sh -c "psql -q"
+  changed_when: false
+  no_log: true
+
+- name: Create the database
+  shell: |
+    set -e
+    exists=$(su postgres -s /bin/sh -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname = '{{ db_name }}'\"")
+    if [ "$exists" != "1" ]; then
+      su postgres -s /bin/sh -c "createdb -O {{ db_user }} -E UTF-8 {{ db_name }}"
+      echo created
+    fi
+  register: create_db
+  changed_when: "'created' in create_db.stdout"

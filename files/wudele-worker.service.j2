@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+# Adapted from the Pollaris administrators' guide.
+[Unit]
+Description=The Messenger worker for Wudele
+After=network.target postgresql.service
+
+[Service]
+ExecStart=/usr/bin/php {{ app_path }}/bin/console messenger:consume async scheduler_default --time-limit=3600
+WorkingDirectory={{ app_path }}
+
+User={{ app_user }}
+Group={{ app_user }}
+
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

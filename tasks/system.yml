@@ -1,0 +1,39 @@
+---
+- name: Install system packages
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+    name:
+      - acl
+      - composer
+      - git
+      - nginx
+      - openssl
+      - "php{{ php_version }}-curl"
+      - "php{{ php_version }}-fpm"
+      - "php{{ php_version }}-intl"
+      - "php{{ php_version }}-mbstring"
+      - "php{{ php_version }}-opcache"
+      - "php{{ php_version }}-pgsql"
+      - "php{{ php_version }}-xml"
+      - "php{{ php_version }}-zip"
+      - postgresql
+    state: present
+
+- name: Create the application user
+  user:
+    name: "{{ app_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ app_home }}"
+    create_home: true
+
+# The group lets nginx (www-data) traverse into the docroot to serve the
+# static files; everything secret below is further restricted.
+- name: Restrict the application home directory
+  file:
+    path: "{{ app_home }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: www-data
+    mode: "0750"

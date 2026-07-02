@@ -1,0 +1,34 @@
+# {{ ansible_managed }}
+# Adapted from the Pollaris administrators' guide. TLS is terminated by the
+# shared Cloud VPS web proxy in front of this instance.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ server_names }};
+    root {{ app_path }}/public;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass unix:/run/php/wudele-fpm.sock;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        # All public traffic reaches this instance through the TLS-terminating
+        # web proxy, so tell Symfony to generate https URLs.
+        fastcgi_param HTTPS on;
+
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+
+    error_log /var/log/nginx/wudele_error.log;
+    access_log /var/log/nginx/wudele_access.log;
+}

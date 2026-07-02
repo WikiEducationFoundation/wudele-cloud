@@ -1,0 +1,7 @@
+[wudele]
+wudele.globaleducation.eqiad1.wikimedia.cloud
+
+[wudele:vars]
+bastion_user=ragesoss
+ansible_user={{ bastion_user }}
+ansible_ssh_common_args=-o ProxyCommand="ssh -a -W %h:%p {{ bastion_user }}@bastion.wmcloud.org"

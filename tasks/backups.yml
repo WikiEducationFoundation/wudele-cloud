@@ -1,0 +1,37 @@
+---
+- name: Create the backups directory
+  file:
+    path: "{{ backups_path }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0700"
+
+- name: Install the backup script
+  template:
+    src: files/backup.sh.j2
+    dest: /usr/local/bin/wudele-backup
+    mode: "0755"
+
+- name: Install the backup systemd service
+  template:
+    src: files/wudele-backup.service.j2
+    dest: /etc/systemd/system/wudele-backup.service
+  register: backup_service
+
+- name: Install the backup systemd timer
+  template:
+    src: files/wudele-backup.timer.j2
+    dest: /etc/systemd/system/wudele-backup.timer
+  register: backup_timer
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+  when: backup_service.changed or backup_timer.changed
+
+- name: Enable the backup timer
+  systemd:
+    name: wudele-backup.timer
+    state: started
+    enabled: true

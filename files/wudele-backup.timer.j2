@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Nightly dump of the Wudele database
+
+[Timer]
+OnCalendar=*-*-* 03:17:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

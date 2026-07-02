@@ -1,0 +1,58 @@
+---
+- hosts: wudele
+  become: true
+  force_handlers: true
+
+  vars:
+    app_user: wudele
+    app_home: /srv/wudele
+    app_path: "{{ app_home }}/app"
+    secrets_path: "{{ app_home }}/secrets"
+    backups_path: /srv/backups/wudele
+    app_repo: https://github.com/WikiEducationFoundation/wudele.git
+    app_version: wudele
+    app_base_url: https://wudele.wmcloud.org
+    app_name: Wudele
+    server_names: wudele.wmcloud.org {{ inventory_hostname }}
+    php_version: "8.4"
+    db_name: wudele
+    db_user: wudele
+    mailer_from: noreply@wudele.wmcloud.org
+
+  handlers:
+    - name: Restart PHP-FPM
+      service:
+        name: "php{{ php_version }}-fpm"
+        state: restarted
+
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Restart the worker
+      service:
+        name: wudele-worker
+        state: restarted
+
+  tasks:
+    - import_tasks: tasks/system.yml
+      tags: system
+
+    - import_tasks: tasks/secrets.yml
+      tags: [database, application]
+
+    - import_tasks: tasks/database.yml
+      tags: database
+
+    - import_tasks: tasks/application.yml
+      tags: application
+
+    - import_tasks: tasks/webserver.yml
+      tags: webserver
+
+    - import_tasks: tasks/worker.yml
+      tags: worker
+
+    - import_tasks: tasks/backups.yml
+      tags: backups

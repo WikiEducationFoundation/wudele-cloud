@@ -1,0 +1,17 @@
+---
+- name: Install the worker systemd unit
+  template:
+    src: files/wudele-worker.service.j2
+    dest: /etc/systemd/system/wudele-worker.service
+  register: worker_unit
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+  when: worker_unit.changed
+
+- name: Ensure the worker is running
+  service:
+    name: wudele-worker
+    state: started
+    enabled: true
